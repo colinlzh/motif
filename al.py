@@ -92,13 +92,13 @@ def classify0(inx,dataset,labels,k):
         sortedcount=sorted(classCount.items(), key=lambda d:d[1], reverse=True)
         return sortedcount[0][0]
 def file2matrix(nline,b):
-    mat= zeros((nline,20))
+    mat= zeros((nline,10))
     labelvector=[]
     index=0                                       
     for line in b:
         line=line.strip()
         lis=line.split("|")
-        mat[index,:]=lis[:20]
+        mat[index,:]=lis[:10]
         labelvector.append(int(lis[-1]))
         index+=1
     return mat,labelvector
@@ -130,33 +130,25 @@ def minus(x):
     return t3+t1[10]
 
 if __name__ == "__main__":
-    holiday=['2014-10-01', '2014-10-02', '2014-10-03', '2015-01-01', '2015-04-05', '2015-05-01', '2015-01-19', '2015-01-20', '2015-01-21', '2015-01-22', '2015-01-23', '2015-01-24', '2015-01-25', '2015-01-26', '2015-01-27', '2015-01-28', '2015-01-29', '2015-01-30', '2015-01-31', '2015-02-01', '2015-02-02', '2015-02-03', '2015-02-04', '2015-02-05', '2015-02-06', '2015-02-07', '2015-02-08', '2015-02-09', '2015-02-10', '2015-02-11', '2015-02-12', '2015-02-13', '2015-02-14', '2015-02-15', '2015-02-16', '2015-02-17', '2015-02-18', '2015-02-19', '2015-02-20', '2015-02-21', '2015-02-22', '2015-02-23', '2015-02-24', '2015-02-25', '2015-02-26', '2015-02-27', '2015-02-28'] 
+    holiday=['2014-09-01', '2014-09-02', '2014-09-03', '2014-09-04', '2014-09-05', '2014-09-06', '2014-09-07', '2014-09-08', '2014-09-09', '2014-09-10', '2014-09-11', '2014-09-12', '2014-09-13','2014-10-01', '2014-10-02', '2014-10-03', '2015-01-01','2014-10-01', '2015-01-19', '2015-01-20', '2015-01-21', '2015-01-22', '2015-01-23', '2015-01-24', '2015-01-25', '2015-01-26', '2015-01-27', '2015-01-28', '2015-01-29', '2015-01-30', '2015-01-31'] 
     sc = SparkContext(appName="PythonWordCount")
     lines = sc.textFile("./NET/wifiuserfilt3", 1)
-    boy=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday)
-    boyf=boy.filter(lambda x:x.split(",")[-1].split(" ")[0]<"2015-01-00")\
-                .map(lambda x:x.split(",")[0]+"\t"+x.split(",")[5]+" "+x.split(",")[6])\
+    boyf=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday)
+    boyl=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday>=5 and x.split(",")[-1].split(" ")[0] not in holiday)
+    boyf=boyf.map(lambda x:x.split(",")[0]+"\t"+x.split(",")[5]+" "+x.split(",")[6])\
                 .sortBy(lambda x: x.split("\t")[0]+x.split(" ")[1])\
                 .map(lambda x:(x.split("\t")[0],x.split("\t")[1]))\
                 .groupByKey()\
                 .mapValues(list)\
                 .map(lambda x:(x[0],style_conv(location_to_motif(x[1]))))\
                 .flatMapValues(lambda x:x)
-    boyl=boy.filter(lambda x:x.split(",")[-1].split(" ")[0]>="2014-01-00")\
-                .map(lambda x:x.split(",")[0]+"\t"+x.split(",")[5]+" "+x.split(",")[6])\
+    boyl=boyl.map(lambda x:x.split(",")[0]+"\t"+x.split(",")[5]+" "+x.split(",")[6])\
                 .sortBy(lambda x: x.split("\t")[0]+x.split(" ")[1])\
                 .map(lambda x:(x.split("\t")[0],x.split("\t")[1]))\
                 .groupByKey()\
                 .mapValues(list)\
                 .map(lambda x:(x[0],style_conv(location_to_motif(x[1]))))\
                 .flatMapValues(lambda x:x)
-                # .map(lambda x:x[0]+"\t"+x[1])
-    # boy.saveAsTextFile("./NET/motif")
-    # boyc=boy.count()  #key is usernumber
-    # boy=boy.map(lambda x: (x[1],1)).reduceByKey(add).filter(lambda x: x[1]>100)\
-    #             .sortBy(lambda x:x[1],ascending=False)\
-    #             .map(lambda x: x[0]+"|"+str(x[1])+"|"+str(float(x[1])/float(boyc)))
-    # boy=sc.textFile("./NET/motif",1).map(lambda x:(x.split("\t")[0],x.split("\t")[1]))
     boycf=boyf.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
     boycl=boyl.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
     motif=sc.textFile("./NET/wifial10",1).map(lambda x:(x.split("|")[0],x.split("|")[1]))
@@ -173,7 +165,7 @@ if __name__ == "__main__":
                 .mapValues(list)\
                 .map(lambda x:(x[0],converter(x[1])))\
                 .join(info)\
-                .map(lambda x:(x[0],x[1][0]+x[1][1]))
+                .map(lambda x:(x[1][0]+x[1][1]))
     boyl=boyl.map(lambda x: (x[0]+"|"+x[1],1))\
                 .reduceByKey(add)\
                 .map(lambda x: (x[0].split("|")[0],x[0]+"|"+ str(x[1])))\
@@ -185,13 +177,16 @@ if __name__ == "__main__":
                 .mapValues(list)\
                 .map(lambda x:(x[0],converter(x[1])))\
                 .join(info)\
-                .map(lambda x:(x[0],x[1][0]))
-    boy=boyl.join(boyf).map(minus)
-    boy.coalesce(1).saveAsTextFile(sys.argv[1])
-    a=boy.count()
-    b=boy.collect()
-    for k in range(2,10):
+                .map(lambda x:(x[1][0]+x[1][1]))
+    boyf.coalesce(1).saveAsTextFile(sys.argv[1])
+    boyl.coalesce(2).saveAsTextFile(sys.argv[2])
+    a=boyf.count()
+    b=boyf.collect()
+    c=boyl.count()
+    d=boyl.collect()
+    for k in range(2,14):
         test(k,a,b)
+        test(k,c,d)
         print(k)
     print("******************OK***********************"+str(boyc))
     sc.stop()
