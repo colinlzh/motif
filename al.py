@@ -130,11 +130,13 @@ def minus(x):
     return t3+t1[10]
 
 if __name__ == "__main__":
-    holiday=['2014-09-01', '2014-09-02', '2014-09-03', '2014-09-04', '2014-09-05', '2014-09-06', '2014-09-07', '2014-09-08', '2014-09-09', '2014-09-10', '2014-09-11', '2014-09-12', '2014-09-13','2014-10-01', '2014-10-02', '2014-10-03', '2015-01-01','2014-10-01', '2015-01-19', '2015-01-20', '2015-01-21', '2015-01-22', '2015-01-23', '2015-01-24', '2015-01-25', '2015-01-26', '2015-01-27', '2015-01-28', '2015-01-29', '2015-01-30', '2015-01-31'] 
+    holiday=['2014-08-31','2014-09-01', '2014-09-02', '2014-09-03', '2014-09-04', '2014-09-05', '2014-09-06', '2014-09-07', '2014-09-08', '2014-09-09', '2014-09-10', '2014-09-11', '2014-09-12', '2014-09-13','2014-10-01', '2014-10-02', '2014-10-03', '2014-10-01', '2015-01-19', '2015-01-20', '2015-01-21', '2015-01-22', '2015-01-23', '2015-01-24', '2015-01-25', '2015-01-26', '2015-01-27', '2015-01-28', '2015-01-29', '2015-01-30', '2015-01-31'] 
     sc = SparkContext(appName="PythonWordCount")
     lines = sc.textFile("./NET/wifiuserfilt3", 1)
-    boyf=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday)
+    boyf=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday and x.split(",")[-1].split(" ")[0]<"2015-11-8")
     boyl=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday>=5 and x.split(",")[-1].split(" ")[0] not in holiday)
+    boycf1=boyf.map(lambda x:x.split(",")[-1].split(" ")[0]).distinct().count()
+    boycl2=boyl.map(lambda x:x.split(",")[-1].split(" ")[0]).distinct().count()
     boyf=boyf.map(lambda x:x.split(",")[0]+"\t"+x.split(",")[5]+" "+x.split(",")[6])\
                 .sortBy(lambda x: x.split("\t")[0]+x.split(" ")[1])\
                 .map(lambda x:(x.split("\t")[0],x.split("\t")[1]))\
@@ -149,6 +151,8 @@ if __name__ == "__main__":
                 .mapValues(list)\
                 .map(lambda x:(x[0],style_conv(location_to_motif(x[1]))))\
                 .flatMapValues(lambda x:x)
+    boycf11=boyf.count()
+    boycl22=boyl.count()
     boycf=boyf.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
     boycl=boyl.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
     motif=sc.textFile("./NET/wifial10",1).map(lambda x:(x.split("|")[0],x.split("|")[1]))
@@ -178,8 +182,8 @@ if __name__ == "__main__":
                 .map(lambda x:(x[0],converter(x[1])))\
                 .join(info)\
                 .map(lambda x:(x[1][0]+x[1][1]))
-    boyf.coalesce(1).saveAsTextFile(sys.argv[1])
-    boyl.coalesce(2).saveAsTextFile(sys.argv[2])
+    # boyf.coalesce(1).saveAsTextFile(sys.argv[1])
+    # boyl.coalesce(2).saveAsTextFile(sys.argv[2])
     a=boyf.count()
     b=boyf.collect()
     c=boyl.count()
@@ -188,5 +192,5 @@ if __name__ == "__main__":
         test(k,a,b)
         test(k,c,d)
         print(k)
-    print("******************OK***********************"+str(boyc))
+    print("******************OK***********************"+str(boycf1)+","+str(boycf11)+","+str(boycl2)+","+str(boycl22))
     sc.stop()
