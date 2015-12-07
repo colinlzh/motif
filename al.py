@@ -66,18 +66,14 @@ def converter(lis):
         d=d+1
     return a
 def word2num(w):
-    if w==u"博士":
-        return "3"
-    if w==u"硕士":
-        return "2"
-    if w==u"本科":
-        return "1"
-    if w==u"女":
-        return "1"
-    if w==u"男":
-        return "2"
-    else :
-        return "0"
+    w.replace(u"男","1")
+    w.replace(u"女","0")
+    w.replace(u"硕士","2")
+    w.replace(u"本科","0")
+    w.replace(u"博士","3")
+    t=w.split("\t")
+    return t[2]+"|"+t[3]+"|"+t[4]+"|"+t[5]
+
 def classify0(inx,dataset,labels,k):
         datasetsize=dataset.shape[0]
         diffmat=tile(inx,(datasetsize,1))-dataset
@@ -92,13 +88,13 @@ def classify0(inx,dataset,labels,k):
         sortedcount=sorted(classCount.items(), key=lambda d:d[1], reverse=True)
         return sortedcount[0][0]
 def file2matrix(nline,b):
-    mat= zeros((nline,10))
+    mat= zeros((nline,16))
     labelvector=[]
     index=0                                       
     for line in b:
         line=line.strip()
         lis=line.split("|")
-        mat[index,:]=lis[:10]
+        mat[index,:]=lis[:16]
         labelvector.append(int(lis[-1]))
         index+=1
     return mat,labelvector
@@ -133,7 +129,7 @@ if __name__ == "__main__":
     holiday=['2014-08-31','2014-09-01', '2014-09-02', '2014-09-03', '2014-09-04', '2014-09-05', '2014-09-06', '2014-09-07', '2014-09-08', '2014-09-09', '2014-09-10', '2014-09-11', '2014-09-12', '2014-09-13','2014-10-01', '2014-10-02', '2014-10-03', '2014-10-01', '2015-01-19', '2015-01-20', '2015-01-21', '2015-01-22', '2015-01-23', '2015-01-24', '2015-01-25', '2015-01-26', '2015-01-27', '2015-01-28', '2015-01-29', '2015-01-30', '2015-01-31'] 
     sc = SparkContext(appName="PythonWordCount")
     lines = sc.textFile("./NET/wifiuserfilt3", 1)
-    boyf=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday and x.split(",")[-1].split(" ")[0]<"2015-11-8")
+    boyf=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday and x.split(",")[-1].split(" ")[0]<"2014-10-30")
     boyl=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday>=5 and x.split(",")[-1].split(" ")[0] not in holiday)
     boycf1=boyf.map(lambda x:x.split(",")[-1].split(" ")[0]).distinct().count()
     boycl2=boyl.map(lambda x:x.split(",")[-1].split(" ")[0]).distinct().count()
@@ -155,8 +151,8 @@ if __name__ == "__main__":
     boycl22=boyl.count()
     boycf=boyf.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
     boycl=boyl.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
-    motif=sc.textFile("./NET/wifial10",1).map(lambda x:(x.split("|")[0],x.split("|")[1]))
-    info=sc.textFile("./EMC/account.txt",1).map(lambda x:(x.split("\t")[1],(word2num(x.split("\t")[5]))))
+    motif=sc.textFile("./NET/wifial20",1).map(lambda x:(x.split("|")[0],x.split("|")[1]))
+    info=sc.textFile("./EMC/account.txt",1).map(lambda x:(x.split("\t")[1],(word2num(x))))
     #next key is usernum+motif cat
     boyf=boyf.map(lambda x: (x[0]+"|"+x[1],1))\
                 .reduceByKey(add)\
