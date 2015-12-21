@@ -6,6 +6,7 @@ from pyspark import SparkContext
 from numpy import *
 import operator
 import os
+CONSTANT=20
 
 def first(x):
     t=x.split(",")
@@ -48,6 +49,7 @@ def style_conv(list_dict):
             rsl.append('{' + dicts[i])
     return rsl
 def converter(lis):
+    global CONSTANT
     lis.sort(key=lambda x:int(x.split("|")[1]))
     d=1
     a=""
@@ -61,16 +63,16 @@ def converter(lis):
                 d=d+1
             a=a+i.split("|")[0]+"|"
             d=d+1
-    while(d<=10):
+    while(d<=CONSTANT):
         a=a+"0"+"|"
         d=d+1
     return a
 def word2num(w):
-    w.replace(u"男","1")
-    w.replace(u"女","0")
-    w.replace(u"硕士","2")
-    w.replace(u"本科","0")
-    w.replace(u"博士","3")
+    w=w.replace(u"男","1")
+    w=w.replace(u"女","0")
+    w=w.replace(u"硕士","2")
+    w=w.replace(u"本科","1")
+    w=w.replace(u"博士","3")
     t=w.split("\t")
     return t[2]+"|"+t[3]+"|"+t[4]+"|"+t[5]
 
@@ -88,13 +90,14 @@ def classify0(inx,dataset,labels,k):
         sortedcount=sorted(classCount.items(), key=lambda d:d[1], reverse=True)
         return sortedcount[0][0]
 def file2matrix(nline,b):
-    mat= zeros((nline,16))
+    global CONSTANT 
+    mat= zeros((nline,CONSTANT))
     labelvector=[]
     index=0                                       
     for line in b:
         line=line.strip()
         lis=line.split("|")
-        mat[index,:]=lis[:16]
+        mat[index,:]=lis[:CONSTANT]
         labelvector.append(int(lis[-1]))
         index+=1
     return mat,labelvector
@@ -129,10 +132,8 @@ if __name__ == "__main__":
     holiday=['2014-08-31','2014-09-01', '2014-09-02', '2014-09-03', '2014-09-04', '2014-09-05', '2014-09-06', '2014-09-07', '2014-09-08', '2014-09-09', '2014-09-10', '2014-09-11', '2014-09-12', '2014-09-13','2014-10-01', '2014-10-02', '2014-10-03', '2014-10-01', '2015-01-19', '2015-01-20', '2015-01-21', '2015-01-22', '2015-01-23', '2015-01-24', '2015-01-25', '2015-01-26', '2015-01-27', '2015-01-28', '2015-01-29', '2015-01-30', '2015-01-31'] 
     sc = SparkContext(appName="PythonWordCount")
     lines = sc.textFile("./NET/wifiuserfilt3", 1)
-    boyf=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday and x.split(",")[-1].split(" ")[0]<"2014-10-30")
-    boyl=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday>=5 and x.split(",")[-1].split(" ")[0] not in holiday)
+    boyf=lines.filter(lambda x:x.find("null")==-1 and time.strptime (x.split(",")[-1],"%Y-%m-%d %H:%M:%S").tm_wday<5 and x.split(",")[-1].split(" ")[0] not in holiday)
     boycf1=boyf.map(lambda x:x.split(",")[-1].split(" ")[0]).distinct().count()
-    boycl2=boyl.map(lambda x:x.split(",")[-1].split(" ")[0]).distinct().count()
     boyf=boyf.map(lambda x:x.split(",")[0]+"\t"+x.split(",")[5]+" "+x.split(",")[6])\
                 .sortBy(lambda x: x.split("\t")[0]+x.split(" ")[1])\
                 .map(lambda x:(x.split("\t")[0],x.split("\t")[1]))\
@@ -140,17 +141,8 @@ if __name__ == "__main__":
                 .mapValues(list)\
                 .map(lambda x:(x[0],style_conv(location_to_motif(x[1]))))\
                 .flatMapValues(lambda x:x)
-    boyl=boyl.map(lambda x:x.split(",")[0]+"\t"+x.split(",")[5]+" "+x.split(",")[6])\
-                .sortBy(lambda x: x.split("\t")[0]+x.split(" ")[1])\
-                .map(lambda x:(x.split("\t")[0],x.split("\t")[1]))\
-                .groupByKey()\
-                .mapValues(list)\
-                .map(lambda x:(x[0],style_conv(location_to_motif(x[1]))))\
-                .flatMapValues(lambda x:x)
     boycf11=boyf.count()
-    boycl22=boyl.count()
     boycf=boyf.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
-    boycl=boyl.map(lambda x:(x[0],1)).reduceByKey(add)  #key is usernumber
     motif=sc.textFile("./NET/wifial20",1).map(lambda x:(x.split("|")[0],x.split("|")[1]))
     info=sc.textFile("./EMC/account.txt",1).map(lambda x:(x.split("\t")[1],(word2num(x))))
     #next key is usernum+motif cat
@@ -166,27 +158,12 @@ if __name__ == "__main__":
                 .map(lambda x:(x[0],converter(x[1])))\
                 .join(info)\
                 .map(lambda x:(x[1][0]+x[1][1]))
-    boyl=boyl.map(lambda x: (x[0]+"|"+x[1],1))\
-                .reduceByKey(add)\
-                .map(lambda x: (x[0].split("|")[0],x[0]+"|"+ str(x[1])))\
-                .join(boycl)\
-                .map(lambda x:(x[1][0].split("|")[1],x[0]+"|"+x[1][0].split("|")[1]+"|"+str(float(x[1][0].split("|")[2])/(x[1][1]))))\
-                .join(motif)\
-                .map(lambda x:(x[1][0].split("|")[0],x[1][0].split("|")[2]+"|"+x[1][1]))\
-                .groupByKey()\
-                .mapValues(list)\
-                .map(lambda x:(x[0],converter(x[1])))\
-                .join(info)\
-                .map(lambda x:(x[1][0]+x[1][1]))
-    # boyf.coalesce(1).saveAsTextFile(sys.argv[1])
+    boyf.coalesce(1).saveAsTextFile(sys.argv[1])
     # boyl.coalesce(2).saveAsTextFile(sys.argv[2])
-    a=boyf.count()
-    b=boyf.collect()
-    c=boyl.count()
-    d=boyl.collect()
-    for k in range(2,14):
-        test(k,a,b)
-        test(k,c,d)
-        print(k)
-    print("******************OK***********************"+str(boycf1)+","+str(boycf11)+","+str(boycl2)+","+str(boycl22))
+    # a=boyf.count()
+    # b=boyf.collect()
+    # for k in range(2,14):
+    #     test(k,a,b)
+    #     print(k)
+    print("******************OK***********************"+str(boycf1)+","+str(boycf11))
     sc.stop()

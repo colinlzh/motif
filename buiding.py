@@ -1,8 +1,10 @@
 # -*- coding:utf-8 -*- ＃
-import sys
 import time
 from operator import add
 from pyspark import SparkContext
+import sys
+reload(sys)
+sys.setdefaultencoding( "utf-8" )
 
 def timeconverter(s):
     t=s.split(",")
@@ -11,8 +13,12 @@ def timeconverter(s):
 if __name__ == "__main__":
     holiday=['2014-10-01', '2014-10-02', '2014-10-03', '2015-01-01', '2015-04-05', '2015-05-01', '2015-01-19', '2015-01-20', '2015-01-21', '2015-01-22', '2015-01-23', '2015-01-24', '2015-01-25', '2015-01-26', '2015-01-27', '2015-01-28', '2015-01-29', '2015-01-30', '2015-01-31', '2015-02-01', '2015-02-02', '2015-02-03', '2015-02-04', '2015-02-05', '2015-02-06', '2015-02-07', '2015-02-08', '2015-02-09', '2015-02-10', '2015-02-11', '2015-02-12', '2015-02-13', '2015-02-14', '2015-02-15', '2015-02-16', '2015-02-17', '2015-02-18', '2015-02-19', '2015-02-20', '2015-02-21', '2015-02-22', '2015-02-23', '2015-02-24', '2015-02-25', '2015-02-26', '2015-02-27', '2015-02-28']
     sc = SparkContext(appName="PythonWordCount")
-    wifiacc = sc.textFile("./NET/wifi", 1).map(lambda x:(x.split(",")[1])).distinct()
+    wifiacc = sc.textFile("./NEWNET/wifi", 1)
+    wifiacc.cache()
+    wifiacc=wifiacc.map(lambda x:(x.split("|")[3])).distinct().collect()
+    for i in wifiacc:
+        print(i)
     # cn=weekend.countByKey()
-    wifiacc.coalesce(1).saveAsTextFile(sys.argv[1])
+    # wifiacc.coalesce(1).saveAsTextFile(sys.argv[1])
     print("******************OK***********************")
     sc.stop()
